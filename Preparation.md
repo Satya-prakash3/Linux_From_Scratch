@@ -6,9 +6,9 @@ Gentoo is good as community says (It has network enabled and required packages f
 
 I have used KVM virtualization using Qemu (You are free to use any virtualization software).
 
-This is going to  be strictly based on arch and arch based systems.
+This is going to be strictly based on arch and arch based systems.
 
-1. First Load the host ISO in live mode(If you have a GUI then immediately go to tty screen)
+1. First install the OS and go to tty screen. (I will prefer cli over GUI as mostly we will need a terminal for compiling the linux kernel and other modules, so don't bother to add a desktop environment)
 2. Check Network adapter is up or not
     ip link
     ![Screenshot](./assets/ip_link.png)
@@ -35,55 +35,37 @@ This is going to  be strictly based on arch and arch based systems.
 
     ![Screenshot](./assets/host_check.png)
 
-8. Before moving to installing our missing packages we need to setup our disk partitions where we can install and compile our packages 
-    1. For this we will create two partitions on the disk 
-        We will create two partitions on the disk:
-        1. Root partition: This will be the main workspace where the system is installed and all packages are compiled.
-        2. Swap partition: This will act as additional memory, helping the system when physical RAM is not sufficient during heavy compilation tasks.
+8. Here I have already created a blank partition for LFS installation (This partition is required to build the LFS system)
+    1. If you have not follow the below instructions
+        1. First we will create a blank partition for LFS
+            mkfs -v -t ext4 /dev/<xxx> (Run this o create a blank partition)(Replace the <xxx> with your name of the LFS partition)
 
-    2. To create partition in a drive follow the below commands 
-        We will use fdisk utility for partitioning the table
-            1. fdisk -l (It will show all the drives)
-            ![Screenshot](./assets/fdisk_l.png)
-            2. lsblk (It will show all the partitions in the drive)
-            ![Screenshot](./assets/lsblk.png)
-            3. fdisk /dev/vda (replace /dev/vda with the correct disk on your system, such as /dev/sda). Take a moment to double-check the device name before pressing Enter—if you have more than one OS or disk, choosing the wrong one can wipe out the wrong system.
-            After entering the fdisk utility type:
-            1. g (To create a GPT partition table)
-            2. n (To create a new partition)
-                1. Select the partition number (Choose it as default or press enter)
-                2. Add the sector size (In my case i have given root partition as 38gb) so type +32G
-            3. t (To provide the partition type)
-                1. enter or 1 (Select the partiton number choose default)
-                2. L (To list all the available partition type for root select Linux File System: 20)
-                3. 20  (This will set the partiton type as Linux File System)
-            (Do this again to create a swap partition: Linux swap partition number is 19)
+            If you don't have a swap create it using the below commands
+                mkswap /dev/<yyy>
 
-    3. After creation of partition we will create the file system on the partition 
-        There are many types of file systems available in linux like ext4, ext3, ext2
-        For our root partition we will create a ext4 file system 
-        Now in terminal type the following command to create a ext4 file system
-            1. mkfs -v -t ext4 /dev/dva1 (Here we need to select the partition name not the disk name) (You can always type "lsblk" to see all the disk and partitions inside it)
-            2. mkswap /dev/vda2
+9. Now we will set the $LFS variable and Umask
+    1. export LFS=/mnt/lfs
+        Having this variable set is beneficial for the future builds as it gives us the path of the filesystem we are about to create.
+    2. umask 022
+        having umask set to 022  ensures that newly created files and directories are only writable by their owner, but are readable and searchable (only for directories) by anyone.
+    N.B. Add these commands to .bashrc_profile of both the root and the user of your host system you don't have to do these manually everytime you reboot the system.
 
-    4. After creating the file system check if everything is correct or not then proceed
-        After creation of file system if we do fdisk -l we will get the following
-        ![Screenshot](./assets/fdisk_l_2.png)
+10. Mount the newly created partition on $LFS (/mnt/LFS)
+        1. mkdir -pv $LFS
+        2. mount -v -t ext4 /dev/<xxx> $LFS (<xxx> willl be your LFS partition)
+        3. For swal use this 
+            /sbin/swapon -v /dev/<zzz>
+        N.B. Complete the whole LFS in one go or else you need to mount the LFS filesystem everytime you reboot
 
 
-9. There are some neccessary packages are missing so we have to install them manually 
-    1. We will start with bison
-        N.B. When we run pacman -Sy bison it won't run (As we have not setup the pgp keyring we need to set that up first)
-            1. First we will initialize the keyring
-                pacman-key --init
-            2. Next we will import all the trusted arch maintainers keys
-                pacman-key --populate archlinux
-            3. Next we will refresh the  keys
-                pacman-key --refresh-keys (It may take upto 20 to 30 minutes for me it took aroung 20 minutes)
-            
-        Install Bison
-            pacman -Sy bison
-    2. Next GCC
-        pacman -Sy gcc
+11. Now we are going to download and install some neccessary packages in order to build a basic linux system.
+    1. First we will create a folder where we will store our all pacgages tar balls.
+        mkdir -v $LFS/sources (This will create the folder)
+        chmod -v a+wt $LFS/sources (This will create a Sticky directory) (Means only owner can delete the files inside it)
+
+    We can download packages manually one by one or we can do it with one go using wget-list 
+    For the wget list we need to create a file of all the packages list
+        wget --input-file=wget-list-sysv --continue --directory-prefix=$LFS/sources
+
 
 
