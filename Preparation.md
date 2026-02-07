@@ -53,7 +53,7 @@ This is going to be strictly based on arch and arch based systems.
 10. Mount the newly created partition on $LFS (/mnt/LFS)
         1. mkdir -pv $LFS
         2. mount -v -t ext4 /dev/<xxx> $LFS (<xxx> willl be your LFS partition)
-        3. For swal use this 
+        3. For swap use this 
             /sbin/swapon -v /dev/<zzz>
         N.B. Complete the whole LFS in one go or else you need to mount the LFS filesystem everytime you reboot
 
@@ -67,5 +67,57 @@ This is going to be strictly based on arch and arch based systems.
     For the wget list we need to create a file of all the packages list
         wget --input-file=wget-list-sysv --continue --directory-prefix=$LFS/sources
 
+    After download to verify the packages create a file "md5sums" and place the fil ein $LFS/sources file then run the following command
+        pushd $LFS/sources
+            md5sum -c md5sums
+        popd
+
+    Give the folder root permissions 
+        chown root:root $LFS/sources/*
+    
+12. Now we will populate the filesystems with some neccessary folders
+        Run the create_dir.sh file
+    Now create the tools folder to store the cross compiler to compile the packages.
+        mkdir -pv $LFS/tools
+
+13. Next we will create the lFS user
+    groupadd lfs
+    useradd -s /bin/bash -g lfs -m -k /dev/null lfs
+
+    Now grant full access of all directories under $LFS to user lfs
+        chown -v lfs $LFS/{usr{,/*},var,etc,tools}
+            case $(uname -m) in
+                x86_64) chown -v lfs $LFS/lib64 ;;
+            esac
+
+    Now login as lfs user 
+        su lfs
+
+14. Now we will create a Good environment by creating two startup files for the bash shell
+        cat > ~/.bash_profile << "EOF"
+            exec env -i HOME=$HOME TERM=$TERM PS1='\u:\w\$ ' /bin/bash
+        EOF
+        (This will create our .bash_profile)
+
+        now we will create the .bashrc file
+            cat > ~/.bashrc << "EOF"
+            set +h
+            umask 022
+            LFS=/mnt/lfs
+            LC_ALL=POSIX
+            LFS_TGT=$(uname -m)-lfs-linux-gnu
+            PATH=/usr/bin
+            if [ ! -L /bin ]; then PATH=/bin:$PATH; fi
+            PATH=$LFS/tools/bin:$PATH
+            CONFIG_SITE=$LFS/usr/share/config.site
+            export LFS LC_ALL LFS_TGT PATH CONFIG_SITE
+            EOF
+        Now add 
+            cat >> ~/.bashrc << "EOF"
+                export MAKEFLAGS=-j$(nproc)
+            EOF
+            (This comand will tell make command to use all the available core in your system for parallel compilation)
+         Now do 
+            source ~/.bash_profile (To check the environment is prepared or not, this will force bash shell to read the new user profile)
 
 
