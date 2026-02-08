@@ -1,10 +1,12 @@
 The Binutils package contains a linker, an assembler, and other tools for handling object files.
 
 1. Extraction
+
 	tar -xvf binutils-2.45.tar.xz
 	cd binutils-2.45
 
 2. Building
+
 	sed '6031s/$add_dir//' -i ltmain.sh
 	mkdir -v build
 	cd build
